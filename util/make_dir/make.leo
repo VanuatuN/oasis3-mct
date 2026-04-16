@@ -1,0 +1,68 @@
+# 
+COUPLE=$(OASIS_HOME)
+ARCHDIR=$(COUPLE)/Linux
+
+# CHAN	: communication technique used in OASIS3 (MPI1/MPI2/NONE)
+CHAN            = MPI1
+#
+# Paths for libraries, object files and binaries
+#
+NETCDF_ROOT := $(shell nf-config --prefix)
+NETCDF_INCLUDE = $(NETCDF_ROOT)/include
+NETCDF_LIBRARY = -L$(NETCDF_ROOT)/lib -lnetcdf -lnetcdff
+#
+# Compiling and other commands
+MAKE        = /usr/bin/make
+F90         = mpifort
+CC          = mpicc
+F           = $(F90)
+f90         = $(F90)
+f           = $(F90)
+
+LD          = $(F90)
+AR          = ar
+ARFLAGS     = -ruv
+
+# -g is necessary in F90FLAGS and LDFLAGS for pgf90 versions lower than 6.1
+# For compiling in double precision, put -r8
+# For compiling in single precision, remove -r8 and add -Duse_realtype_single
+NCI_INTEL_FLAGS = -r8 -i4 -traceback -fpe0 -convert big_endian -fno-alias -ip -check noarg_temp_created
+NCI_REPRO_FLAGS = -fp-model precise -fp-model source -align all
+ifeq ($(DEBUG), yes)
+    NCI_DEBUG_FLAGS = -g3 -O0 -fpe0 -no-vec -debug all -check all -no-vec
+    F90FLAGS_1      = $(NCI_INTEL_FLAGS) $(NCI_REPRO_FLAGS) $(NCI_DEBUG_FLAGS)
+    CPPDEF          = -Duse_netCDF -Duse_comm_$(CHAN) -DTREAT_OVERLAY -DDEBUG -D__VERBOSE
+    MCT_FCFLAGS     = $(NCI_REPRO_FLAGS) $(NCI_DEBUG_FLAGS) -ip
+else
+    NCI_OPTIM_FLAGS = -g3 -O2 -axCORE-AVX2 -debug all -check none -qopt-report=5 -qopt-report-annotate
+    F90FLAGS_1      = $(NCI_INTEL_FLAGS) $(NCI_REPRO_FLAGS) $(NCI_OPTIM_FLAGS)
+    CPPDEF          = -Duse_netCDF -Duse_comm_$(CHAN) -DTREAT_OVERLAY
+    MCT_FCFLAGS     = $(NCI_REPRO_FLAGS) $(NCI_OPTIM_FLAGS) -ip
+endif
+f90FLAGS_1  = $(F90FLAGS_1)
+FFLAGS_1    = $(F90FLAGS_1)
+fFLAGS_1    = $(F90FLAGS_1)
+CCFLAGS_1   = 
+LDFLAGS     = 
+
+#
+###################
+#
+# Additional definitions that should not be changed
+#
+FLIBS		= $(NETCDF_LIBRARY)
+# BINDIR        : directory for executables
+BINDIR          = $(ARCHDIR)/bin
+# LIBBUILD      : contains a directory for each library
+LIBBUILD        = $(ARCHDIR)/build/lib
+# INCPSMILE     : includes all *o and *mod for each library
+INCPSMILE       = -I$(LIBBUILD)/psmile.$(CHAN) -I$(LIBBUILD)/pio -I$(LIBBUILD)/mct
+
+F90FLAGS  = $(F90FLAGS_1) $(INCPSMILE) $(CPPDEF) -I$(NETCDF_INCLUDE)
+f90FLAGS  = $(f90FLAGS_1) $(INCPSMILE) $(CPPDEF) -I$(NETCDF_INCLUDE)
+FFLAGS    = $(FFLAGS_1) $(INCPSMILE) $(CPPDEF) -I$(NETCDF_INCLUDE)
+fFLAGS    = $(fFLAGS_1) $(INCPSMILE) $(CPPDEF) -I$(NETCDF_INCLUDE)
+CCFLAGS   = $(CCFLAGS_1) $(INCPSMILE) $(CPPDEF) -I$(NETCDF_INCLUDE)
+#
+#############################################################################
+
